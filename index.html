@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五護四仁 點名與平時分數系統</title>
+  <style>
+    :root {
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --primary: #4a90e2;
+      --danger: #e74c3c;
+      --success: #2ecc71;
+      --group-color: #f39c12;
+      --text: #2c3e50;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .header h1 {
+      margin: 0 0 8px 0;
+      color: #1a252f;
+    }
+    
+    .admin-bar {
+      position: absolute;
+      top: 0;
+      right: 10px;
+    }
+    .btn-login {
+      background-color: #34495e;
+      color: white;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button:hover { opacity: 0.85; }
+    button:active { transform: scale(0.98); }
+    
+    .btn-save { background-color: var(--success); color: white; font-size: 15px; padding: 10px 20px; }
+    .btn-export { background-color: #3498db; color: white; font-size: 15px; padding: 10px 20px; }
+    .btn-import { background-color: #9b59b6; color: white; font-size: 15px; padding: 10px 20px; }
+    .btn-reset { background-color: var(--danger); color: white; }
+
+    .groups-container {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      max-width: 100%;
+    }
+    .group-card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      padding: 15px;
+      border-left: 6px solid var(--primary);
+    }
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #eee;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .group-title {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .group-score-bar {
+      background-color: #fef9e7;
+      border: 1px solid #f9e79f;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #d35400;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    .student-table {
+      width: 100%;
+      border-collapse: collapse;
+      white-space: nowrap;
+    }
+    .student-table th, .student-table td {
+      padding: 8px 10px;
+      text-align: center;
+      border: 1px solid #eef2f5;
+      font-size: 13px;
+    }
+    .student-table th {
+      background-color: #f8f9fa;
+      color: #555;
+    }
+
+    /* 特殊欄位與區段樣式 */
+    .th-first-week { background-color: #e1f5fe !important; color: #0288d1 !important; }
+    .th-midterm-report { background-color: #ffe0b2 !important; color: #e65100 !important; }
+    .th-midterm-exam { background-color: #ffebee !important; color: #c62828 !important; }
+    .th-final-report { background-color: #bbdefb !important; color: #0d47a1 !important; }
+    .th-final-happy { background-color: #e8f5e9 !important; color: #1b5e20 !important; }
+    .th-group-score { background-color: #fcf3cf !important; color: #b7950b !important; }
+    
+    /* 階段總結欄位樣式 */
+    .th-midterm-summary { background-color: #fff3e0 !important; color: #e65100 !important; border-left: 2px solid #ffb74d !important; border-right: 2px solid #ffb74d !important; }
+    .td-midterm-summary { background-color: #fff8e1 !important; font-weight: bold; border-left: 2px solid #ffb74d !important; border-right: 2px solid #ffb74d !important; }
+    
+    .th-final-summary { background-color: #e8eaf6 !important; color: #1a237e !important; border-left: 2px solid #9fa8da !important; border-right: 2px solid #9fa8da !important; }
+    .td-final-summary { background-color: #e8eaf6 !important; font-weight: bold; border-left: 2px solid #9fa8da !important; border-right: 2px solid #9fa8da !important; }
+
+    .role-leader {
+      background-color: #fef9e7;
+      color: #f39c12;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .btn-calc {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+      border: none;
+      margin: 0 1px;
+    }
+    .btn-plus { background-color: #2ecc71; }
+    .btn-minus { background-color: #e74c3c; }
+    .score-badge { font-weight: bold; color: #27ae60; font-size: 15px; }
+
+    /* 權限控制：未解鎖時隱藏管理功能與按鈕 */
+    body:not(.is-admin) .admin-only {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="admin-bar">
+      <button id="authBtn" class="btn-login" onclick="toggleAuth()">🔑 老師登入</button>
+    </div>
+    <h1>五護四仁 點名與平時分數系統</h1>
+    <p id="modeDesc">【目前為學生檢視模式】僅供分數查詢</p>
+  </div>
+
+  <div class="controls admin-only">
+    <button class="btn-save" onclick="manualSave()">💾 儲存紀錄</button>
+    <button class="btn-export" onclick="exportBackup()">📥 下載備份檔</button>
+    <button class="btn-import" onclick="document.getElementById('importFile').click()">📤 載入備份檔</button>
+    <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importBackup(event)">
+    <button class="btn-reset" onclick="resetData()">⚠️ 清除所有紀錄</button>
+  </div>
+
+  <div class="groups-container" id="groupsContainer"></div>
+
+  <script>
+    // 預設登入密碼 (可自行修訂)
+    const ADMIN_PASSWORD = "1234";
+    let isAdmin = false;
+
+    const groupData = [
+      { id: 1, leader: 13, members: [28, 37, 15, 47, 34, 50] },
+      { id: 2, leader: 44, members: [1, 19, 26, 8, 24, 40] },
+      { id: 3, leader: 6, members: [16, 32, 48, 9] },
+      { id: 4, leader: 21, members: [42, 3, 5, 41, 18] },
+      { id: 5, leader: 49, members: [23, 45, 14, 43, 36] },
+      { id: 6, leader: 35, members: [2, 4, 20, 25, 11] }
+    ];
+
+    const dateList = [
+      { date: '9/16 (三)', tag: '第一週', type: 'first-week', period: 'midterm' },
+      { date: '9/23 (三)', type: 'normal', period: 'midterm' },
+      { date: '9/30 (三)', type: 'normal', period: 'midterm' },
+      { date: '10/7 (三)', type: 'normal', period: 'midterm' },
+      { date: '10/14 (三)', type: 'normal', period: 'midterm' },
+      { date: '10/21 (三)', type: 'normal', period: 'midterm' },
+      { date: '10/28 (三)', tag: '期中口頭報告', type: 'midterm-report', period: 'midterm' },
+      { date: '11/4 (三)', tag: '期中口頭報告', type: 'midterm-report', period: 'midterm' },
+      { date: '11/11 (三)', tag: '期中考(不上課)', type: 'midterm-exam', period: 'none' },
+      
+      { date: '11/18 (三)', type: 'normal', period: 'final' },
+      { date: '11/25 (三)', type: 'normal', period: 'final' },
+      { date: '12/2 (三)', type: 'normal', period: 'final' },
+      { date: '12/9 (三)', type: 'normal', period: 'final' },
+      { date: '12/16 (三)', type: 'normal', period: 'final' },
+      { date: '12/23 (三)', type: 'normal', period: 'final' },
+      { date: '12/30 (三)', tag: '期末成果驗收', type: 'final-report', period: 'final' },
+      { date: '116/1/6 (三)', tag: '期末成果驗收', type: 'final-report', period: 'final' },
+      { date: '116/1/13 (三)', tag: '期末快樂 🎉', type: 'final-happy', period: 'final' }
+    ];
+
+    let records = JSON.parse(localStorage.getItem('护四仁_records_v13')) || {};
+    let groupBaseScores = JSON.parse(localStorage.getItem('护四仁_group_base_v13')) || {};
+
+    // 登入/登出 控制
+    function toggleAuth() {
+      if (isAdmin) {
+        isAdmin = false;
+        document.body.classList.remove('is-admin');
+        document.getElementById('authBtn').innerText = '🔑 老師登入';
+        document.getElementById('modeDesc').innerText = '【目前為學生檢視模式】僅供分數查詢';
+        alert('已登出管理者模式。');
+      } else {
+        const pwd = prompt('請輸入老師管理密碼：');
+        if (pwd === ADMIN_PASSWORD) {
+          isAdmin = true;
+          document.body.classList.add('is-admin');
+          document.getElementById('authBtn').innerText = '🔒 退出登入';
+          document.getElementById('modeDesc').innerText = '🔓【管理者模式】可修改與編輯分數';
+          alert('驗證成功！已進入管理者模式。');
+        } else if (pwd !== null) {
+          alert('❌ 密碼錯誤！');
+        }
+      }
+      render();
+    }
+
+    function saveData() {
+      localStorage.setItem('护四仁_records_v13', JSON.stringify(records));
+      localStorage.setItem('护四仁_group_base_v13', JSON.stringify(groupBaseScores));
+    }
+
+    function manualSave() {
+      saveData();
+      alert('✅ 所有分數紀錄已儲存！');
+    }
+
+    function exportBackup() {
+      saveData();
+      const backupData = {
+        records: records,
+        groupBaseScores: groupBaseScores,
+        exportTime: new Date().toLocaleString()
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `五護四仁_成績備份_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          if (importedData.records && importedData.groupBaseScores) {
+            records = importedData.records;
+            groupBaseScores = importedData.groupBaseScores;
+            saveData();
+            render();
+            alert('🎉 備份資料載入成功！');
+          } else {
+            alert('⚠️ 備份檔案格式不正確！');
+          }
+        } catch (err) {
+          alert('❌ 檔案讀取失敗：' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function getStudentScore(seat, date, type) {
+      if (!records[seat]) records[seat] = {};
+      if (!records[seat][date]) records[seat][date] = { attendance: 0, assignment: 0 };
+      return records[seat][date][type] || 0;
+    }
+
+    function updateStudentScore(seat, date, type, delta) {
+      if (!isAdmin) return;
+      if (!records[seat]) records[seat] = {};
+      if (!records[seat][date]) records[seat][date] = { attendance: 0, assignment: 0 };
+      records[seat][date][type] += delta;
+      
+      saveData();
+      render();
+    }
+
+    function getGroupBaseScore(groupId, date) {
+      if (!groupBaseScores[groupId]) groupBaseScores[groupId] = {};
+      return groupBaseScores[groupId][date] || 0;
+    }
+
+    function updateGroupBaseScore(groupId, date, delta) {
+      if (!isAdmin) return;
+      if (!groupBaseScores[groupId]) groupBaseScores[groupId] = {};
+      if (!groupBaseScores[groupId][date]) groupBaseScores[groupId][date] = 0;
+      groupBaseScores[groupId][date] += delta;
+      
+      saveData();
+      render();
+    }
+
+    function getStudentWeeklyTotal(seat, groupId, date) {
+      const base = getGroupBaseScore(groupId, date);
+      const att = getStudentScore(seat, date, 'attendance');
+      const ass = getStudentScore(seat, date, 'assignment');
+      return base + att + ass;
+    }
+
+    function getStudentPeriodTotal(seat, groupId, period) {
+      let total = 0;
+      dateList.filter(d => d.period === period).forEach(item => {
+        total += getStudentWeeklyTotal(seat, groupId, item.date);
+      });
+      return total;
+    }
+
+    function getGroupPeriodBaseScore(groupId, period) {
+      let total = 0;
+      dateList.filter(d => d.period === period).forEach(item => {
+        total += getGroupBaseScore(groupId, item.date);
+      });
+      return total;
+    }
+
+    function resetData() {
+      if (!isAdmin) return;
+      if (confirm('⚠️ 確定要清除所有分數紀錄嗎？')) {
+        localStorage.removeItem('护四仁_records_v13');
+        localStorage.removeItem('护四仁_group_base_v13');
+        records = {};
+        groupBaseScores = {};
+        saveData();
+        render();
+        alert('所有紀錄已清空。');
+      }
+    }
+
+    function getThClass(type) {
+      if (type === 'first-week') return 'th-first-week';
+      if (type === 'midterm-report') return 'th-midterm-report';
+      if (type === 'midterm-exam') return 'th-midterm-exam';
+      if (type === 'final-report') return 'th-final-report';
+      if (type === 'final-happy') return 'th-final-happy';
+      return '';
+    }
+
+    function render() {
+      const container = document.getElementById('groupsContainer');
+      container.innerHTML = '';
+
+      groupData.forEach(g => {
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        
+        const midtermGTotal = getGroupPeriodBaseScore(g.id, 'midterm');
+        const finalGTotal = getGroupPeriodBaseScore(g.id, 'final');
+        const groupCumTotal = midtermGTotal + finalGTotal;
+
+        let html = `
+          <div class="group-header">
+            <div class="group-title">組別 ${g.id}</div>
+            <div class="group-score-bar">🏆 全組當週基礎加分累計：${groupCumTotal} 分 (期中: ${midtermGTotal} / 期末: ${finalGTotal})</div>
+          </div>
+          <div class="table-wrapper">
+            <table class="student-table">
+              <thead>
+                <tr>
+                  <th rowspan="2">座號</th>
+                  <th rowspan="2">身份</th>
+                  ${dateList.map(item => {
+                    const thCls = getThClass(item.type);
+                    const tagText = item.tag ? `<br><small>(${item.tag})</small>` : '';
+                    let res = '';
+                    if (item.type === 'midterm-exam') {
+                      res += `<th rowspan="2" class="${thCls}">${item.date}${tagText}</th>`;
+                      res += `<th colspan="3" class="th-midterm-summary">期中成績總結 (9/16~11/4)</th>`;
+                    } else {
+                      res += `<th colspan="3" class="${thCls}">${item.date}${tagText}</th>`;
+                    }
+                    return res;
+                  }).join('')}
+                  <th colspan="3" class="th-final-summary">期末成績總結 (11/18~1/13)</th>
+                  <th rowspan="2">學期總成績</th>
+                </tr>
+                <tr>
+                  ${dateList.map(item => {
+                    if (item.type === 'midterm-exam') return '';
+                    return `
+                      <th>到課</th>
+                      <th>作業</th>
+                      <th class="th-group-score">小組得分</th>
+                    `;
+                  }).join('')}
+                  <th class="th-midterm-summary">個人加分</th>
+                  <th class="th-midterm-summary">小組加分</th>
+                  <th class="th-midterm-summary">期中總分</th>
+                  <th class="th-final-summary">個人加分</th>
+                  <th class="th-final-summary">小組加分</th>
+                  <th class="th-final-summary">期末總分</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        // 全組當週加分
+        html += `
+          <tr style="background-color: #fffde7; font-weight: bold;">
+            <td colspan="2">全組當週加分</td>
+            ${dateList.map(item => {
+              if (item.type === 'midterm-exam') {
+                return `
+                  <td style="color: #c62828;">-</td>
+                  <td colspan="3" class="td-midterm-summary" style="color:#d35400;">期中累計：${midtermGTotal} 分</td>
+                `;
+              }
+              const gBase = getGroupBaseScore(g.id, item.date);
+              const btnBtns = isAdmin ? `
+                <button class="btn-calc btn-plus admin-only" onclick="updateGroupBaseScore(${g.id}, '${item.date}', 1)">+</button>
+                <button class="btn-calc btn-minus admin-only" onclick="updateGroupBaseScore(${g.id}, '${item.date}', -1)">-</button>
+              ` : '';
+              return `
+                <td colspan="3" style="color: #b7950b;">
+                  ${gBase} 分 ${btnBtns}
+                </td>
+              `;
+            }).join('')}
+            <td colspan="3" class="td-final-summary" style="color:#1a237e;">期末累計：${finalGTotal} 分</td>
+            <td style="font-size: 14px; color: #27ae60;">${groupCumTotal} 分</td>
+          </tr>
+        `;
+
+        const allMembers = [g.leader, ...g.members];
+        allMembers.forEach(seat => {
+          const isLeader = seat === g.leader;
+
+          const midTotal = getStudentPeriodTotal(seat, g.id, 'midterm');
+          const finTotal = getStudentPeriodTotal(seat, g.id, 'final');
+          const semesterTotal = midTotal + finTotal;
+
+          html += `
+            <tr>
+              <td><strong>${seat} 號</strong></td>
+              <td>${isLeader ? '<span class="role-leader">組長</span>' : '組員'}</td>
+          `;
+
+          dateList.forEach(item => {
+            if (item.type === 'midterm-exam') {
+              html += `
+                <td style="color: #999; background-color: #fafafa;">不上課</td>
+                <td class="td-midterm-summary">-</td>
+                <td class="td-midterm-summary">${midtermGTotal}</td>
+                <td class="td-midterm-summary" style="color:#e65100;">${midTotal}</td>
+              `;
+              return;
+            }
+
+            const att = getStudentScore(seat, item.date, 'attendance');
+            const ass = getStudentScore(seat, item.date, 'assignment');
+            const weeklyTotal = getStudentWeeklyTotal(seat, g.id, item.date);
+
+            const attBtns = isAdmin ? `
+              <button class="btn-calc btn-plus admin-only" onclick="updateStudentScore(${seat}, '${item.date}', 'attendance', 1)">+</button>
+              <button class="btn-calc btn-minus admin-only" onclick="updateStudentScore(${seat}, '${item.date}', 'attendance', -1)">-</button>
+            ` : '';
+
+            const assBtns = isAdmin ? `
+              <button class="btn-calc btn-plus admin-only" onclick="updateStudentScore(${seat}, '${item.date}', 'assignment', 1)">+</button>
+              <button class="btn-calc btn-minus admin-only" onclick="updateStudentScore(${seat}, '${item.date}', 'assignment', -1)">-</button>
+            ` : '';
+
+            html += `
+              <td>${att} ${attBtns}</td>
+              <td>${ass} ${assBtns}</td>
+              <td style="background-color: #fffef0; color: #b7950b; font-weight: bold;">
+                +${weeklyTotal}
+              </td>
+            `;
+          });
+
+          html += `
+              <td class="td-final-summary">-</td>
+              <td class="td-final-summary">${finalGTotal}</td>
+              <td class="td-final-summary" style="color:#1a237e;">${finTotal}</td>
+              <td class="score-badge">${semesterTotal} 分</td>
+            </tr>
+          `;
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+        card.innerHTML = html;
+        container.appendChild(card);
+      });
+    }
+
+    render();
+  </script>
+
+</body>
+</html>
